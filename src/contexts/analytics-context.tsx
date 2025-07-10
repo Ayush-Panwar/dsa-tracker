@@ -2,6 +2,44 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
+// Define more specific types for the arrays that were using 'any'
+interface Submission {
+  id: string
+  code: string
+  language: string
+  status: string
+  runtime?: string
+  memory?: string
+  submittedAt: string
+  problem: {
+    title: string
+    difficulty: string
+    platform: string
+  }
+}
+
+interface Problem {
+  id: string
+  title: string
+  difficulty: string
+  platform: string
+  updatedAt: string
+  problemTags?: Array<{
+    tag: {
+      id: string
+      name: string
+      color?: string
+    }
+  }>
+}
+
+interface Tag {
+  id: string
+  name: string
+  color?: string
+  count: number
+}
+
 // Define the analytics data structure based on your API response
 interface AnalyticsData {
   stats: {
@@ -19,9 +57,9 @@ interface AnalyticsData {
     problemsByPlatform: Array<{ platform: string, _count: { id: number } }>
   }
   weeklyActivity: Array<{ day: string, count: number }>
-  recentSubmissions: any[]
-  recentProblems: any[]
-  topTags: any[]
+  recentSubmissions: Submission[]
+  recentProblems: Problem[]
+  topTags: Tag[]
   successRate: number
 }
 
