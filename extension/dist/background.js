@@ -15,7 +15,7 @@ __webpack_require__.r(__webpack_exports__);
 // Storage keys
 const AUTH_KEY = 'dsa_tracker_auth';
 // @ts-expect-error - process.env.API_BASE_URL is injected by webpack.DefinePlugin
-const API_BASE_URL = "https://dsa-tracker.vercel.app/api" || 0;
+const API_BASE_URL = "https://dsa-tracker.vercel.app" || 0;
 // Storage API wrapper
 class StorageService {
     // Auth methods
@@ -236,7 +236,7 @@ __webpack_require__.r(__webpack_exports__);
 const CONNECTIVITY_CHECK_URL = 'https://www.google.com';
 // API base URL
 // @ts-expect-error - process.env.API_BASE_URL is injected by webpack.DefinePlugin
-const API_BASE_URL = "https://dsa-tracker.vercel.app/api" || 0;
+const API_BASE_URL = "https://dsa-tracker.vercel.app" || 0;
 // Global variable to track online status
 let onlineStatus = true; // Default to online, will be checked immediately
 // Listen for extension installation

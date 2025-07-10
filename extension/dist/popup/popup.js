@@ -15,7 +15,7 @@ __webpack_require__.r(__webpack_exports__);
 // Storage keys
 const AUTH_KEY = 'dsa_tracker_auth';
 // @ts-expect-error - process.env.API_BASE_URL is injected by webpack.DefinePlugin
-const API_BASE_URL = "https://dsa-tracker.vercel.app/api" || 0;
+const API_BASE_URL = "https://dsa-tracker.vercel.app" || 0;
 // Storage API wrapper
 class StorageService {
     // Auth methods
@@ -233,7 +233,7 @@ __webpack_require__.r(__webpack_exports__);
 
 // Add a configurable API URL that can be updated easily
 // @ts-expect-error - process.env.API_BASE_URL is injected by webpack.DefinePlugin
-const API_BASE_URL = "https://dsa-tracker.vercel.app/api" || 0;
+const API_BASE_URL = "https://dsa-tracker.vercel.app" || 0;
 document.addEventListener('DOMContentLoaded', async () => {
     const loginSection = document.getElementById('login-section');
     const problemSection = document.getElementById('problem-section');

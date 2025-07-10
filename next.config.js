@@ -1,17 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Explicitly exclude the extension directory from being processed by Next.js
-  webpack: (config) => {
-    // Add the extension directory to the list of ignored modules
-    config.watchOptions = {
-      ...config.watchOptions,
-      ignored: ['**/node_modules/**', '**/extension/**']
-    };
-    return config;
+  experimental: { appDir: true },
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,OPTIONS,POST,PUT,DELETE' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' }
+        ]
+      }
+    ]
   }
 }
 
-module.exports = nextConfig 
+module.exports = nextConfig;
  
  
  
