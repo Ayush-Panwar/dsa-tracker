@@ -24,6 +24,31 @@ export async function middleware(request: NextRequest) {
       return response
     }
     
+    // Handle duplicate /api/api/ pattern from extension
+    // This happens because the extension's API_BASE_URL already includes /api
+    if (request.nextUrl.pathname.startsWith('/api/api/')) {
+      const correctedPath = request.nextUrl.pathname.replace('/api/api/', '/api/')
+      const url = new URL(correctedPath, request.url)
+      
+      // For these routes, add CORS headers too
+      const response = NextResponse.rewrite(url)
+      
+      // Add CORS headers
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+      
+      // Handle preflight requests
+      if (request.method === 'OPTIONS') {
+        return new NextResponse(null, { 
+          status: 200,
+          headers: response.headers
+        })
+      }
+      
+      return response
+    }
+    
     // Update session with new auth cookies and get session data
     const result = await updateSession(request)
     const session = result.session
