@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     'X-Client-Info': 'dsa-tracker-extension/1.0.0' // Supabase client info
                 },
                 body: JSON.stringify({ email, password }),
-                credentials: 'include' // Include cookies in the request
+                credentials: 'same-origin' // Changed from 'include' to 'same-origin'
             });
             // Get the response data
             const data = await response.json();
@@ -367,7 +367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         'X-Client-Info': 'dsa-tracker-extension/1.0.0',
                         'Cookie': testAuth?.sessionCookie || ''
                     },
-                    credentials: 'include'
+                    credentials: 'same-origin'
                 });
                 if (testResponse.ok) {
                     console.log('Auth test successful!');
@@ -378,7 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.log('Attempting to extract Supabase config from backend...');
                     const configResponse = await fetch(`${API_BASE_URL}/api/config`, {
                         method: 'GET',
-                        credentials: 'include'
+                        credentials: 'same-origin'
                     });
                     if (configResponse.ok) {
                         console.log('Config data:', await configResponse.json());
