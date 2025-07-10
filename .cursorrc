@@ -1,0 +1,14 @@
+{
+  "project": {
+    "structure": {
+      "default_directory": "src",
+      "api_routes": "src/app/api",
+      "components": "src/components",
+      "lib": "src/lib",
+      "utils": "src/utils"
+    }
+  }
+} 
+ 
+ 
+ 

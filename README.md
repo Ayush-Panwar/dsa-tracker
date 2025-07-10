@@ -20,6 +20,30 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Project Structure
+
+This project follows a specific directory structure that should be maintained:
+
+```
+src/
+  ├── app/              # Next.js App Router
+  │   ├── api/          # API routes
+  │   └── (routes)/     # App routes
+  ├── components/       # React components
+  ├── lib/              # Library code, utilities
+  └── utils/            # Helper functions
+prisma/                 # Prisma schema and migrations
+public/                 # Static assets
+```
+
+### Development Guidelines
+
+- All new code should be placed within the `src/` directory
+- API routes should be created in `src/app/api/`
+- Components should be placed in `src/components/`
+- Utilities and helper functions go in `src/utils/`
+- Database models and client code should be in `src/lib/`
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

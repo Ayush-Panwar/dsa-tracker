@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "DSA Tracker",
+  "version": "1.0.0",
+  "description": "Track your LeetCode problem-solving progress and analyze your solutions",
+  "action": {
+    "default_popup": "popup/popup.html"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "cookies",
+    "tabs",
+    "webRequest",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://leetcode.com/*",
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/*"],
+      "js": ["fetch-interceptor.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://leetcode.com/problems/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["pageFetchInterceptor.js"],
+      "matches": ["https://leetcode.com/*"]
+    }
+  ]
+} 

@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+ provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String       @id @default(cuid())
+  userId        String       @unique // maps to auth.users.id
+  name          String?
+  email         String?      @unique
+  imageUrl      String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  problems      Problem[]
+  submissions   Submission[]
+  statistics    Statistics?
+  activities    Activity[]
+  preferences   Preference?
+  tags          Tag[]
+  extensionTokens ExtensionToken[]
+  achievements  UserAchievement[]
+  errorPatterns ErrorPattern[]
+  aiAnalyses    AiAnalysis[]
+  errorGroups   ErrorGroup[]
+  progress      UserProgress?
+}
+
+model Problem {
+  id            String       @id @default(cuid())
+  title         String
+  platformId    String?      // ID from the original platform (LeetCode, etc.)
+  platform      String       @default("LeetCode") // LeetCode, HackerRank, CodeForces, etc.
+  difficulty    String       // Easy, Medium, Hard
+  url           String?
+  description   String?      @db.Text
+  examples      Json?        // Store test cases/examples
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  submissions   Submission[]
+  problemTags   ProblemTag[]
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  status        String       @default("Todo") // Todo, Attempted, Solved
+  notes         String?      @db.Text
+  lastAttempted DateTime?
+  testCases     TestCase[]
+  aiAnalyses    AiAnalysis[]
+
+  @@index([difficulty])
+  @@index([status])
+  @@index([platform])
+  @@index([userId])
+}
+
+model Submission {
+  id              String            @id @default(cuid())
+  code            String            @db.Text
+  language        String
+  status          String            // Accepted, Wrong Answer, Time Limit Exceeded, Runtime Error
+  runtime         String?
+  memory          String?
+  createdAt       DateTime          @default(now())
+  submittedAt     DateTime          @default(now())
+  errors          Error[]
+  problemId       String
+  problem         Problem           @relation(fields: [problemId], references: [id])
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  solutionVersions SolutionVersion[]
+  externalId      String?           // External ID from platforms like LeetCode
+
+  @@index([userId])
+  @@index([problemId])
+  @@index([status])
+  @@index([submittedAt])
+  @@index([externalId])
+}
+
+model Error {
+  id            String       @id @default(cuid())
+  errorMessage  String       @db.Text
+  errorType     String       // Broader categories: Syntax, Logic, Runtime, etc.
+  errorSubtype  String?      // More specific: ArrayIndexOutOfBounds, NullPointer, etc.
+  testCase      String?      @db.Text
+  lineNumber    Int?
+  columnNumber  Int?
+  snippetContext String?     @db.Text
+  suggestedFix  String?      @db.Text
+  aiAnalysis    Json?        // Structured AI analysis
+  createdAt     DateTime     @default(now())
+  submissionId  String
+  submission    Submission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  patterns      ErrorPattern[]
+}
+
+model Tag {
+  id            String       @id @default(cuid())
+  name          String
+  color         String?
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  problems      ProblemTag[]
+  createdAt     DateTime     @default(now())
+  
+  @@unique([name, userId])
+  @@index([userId])
+}
+
+model ProblemTag {
+  problemId     String
+  problem       Problem      @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  tagId         String
+  tag           Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  assignedAt    DateTime     @default(now())
+
+  @@id([problemId, tagId])
+  @@index([problemId])
+  @@index([tagId])
+}
+
+model Activity {
+  id            String       @id @default(cuid())
+  date          DateTime     @default(now()) @db.Date
+  problemsSolved Int         @default(0)
+  problemsAttempted Int      @default(0)
+  streakCount   Int?
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  
+  @@unique([date, userId])
+  @@index([userId])
+  @@index([date])
+}
+
+model Statistics {
+  id            String       @id @default(cuid())
+  totalSolved   Int          @default(0)
+  easyCount     Int          @default(0)
+  mediumCount   Int          @default(0)
+  hardCount     Int          @default(0)
+  streak        Int          @default(0)
+  longestStreak Int          @default(0)
+  lastSolved    DateTime?
+  userId        String       @unique
+  user          User         @relation(fields: [userId], references: [id])
+}
+
+model Preference {
+  id            String       @id @default(cuid())
+  theme         String       @default("system") // system, light, dark
+  codeEditorTheme String     @default("default")
+  notifications Boolean      @default(true)
+  dailyGoal     Int          @default(1)
+  userId        String       @unique
+  user          User         @relation(fields: [userId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model ExtensionToken {
+  id            String       @id @default(cuid())
+  token         String       @unique
+  name          String?      // device or browser name
+  lastUsed      DateTime?
+  createdAt     DateTime     @default(now())
+  revoked       Boolean      @default(false)
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([token])
+}
+
+// Store user achievements
+model UserAchievement {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  achievementId String       // Maps to achievement ID in code
+  earnedAt      DateTime     @default(now())
+  
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+model TestCase {
+  id            String       @id @default(cuid())
+  input         String       @db.Text
+  expectedOutput String       @db.Text
+  description   String?
+  isPublic      Boolean      @default(true)
+  problemId     String
+  problem       Problem      @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model ErrorPattern {
+  id            String       @id @default(cuid())
+  name          String
+  description   String       @db.Text
+  frequency     Int          @default(1)
+  errors        Error[]
+  userId        String?      // Optional: If we want to track patterns per user
+  user          User?        @relation(fields: [userId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  @@index([userId])
+}
+
+model SolutionVersion {
+  id            String       @id @default(cuid())
+  code          String       @db.Text
+  language      String
+  versionNumber Int
+  changelog     String?      @db.Text
+  submissionId  String
+  submission    Submission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+  codeChanges   CodeChange?
+}
+
+// New models for Phase 5: AI Analysis Integration
+
+model CodeChange {
+  id                String          @id @default(cuid())
+  addedLines        Int             @default(0)
+  removedLines      Int             @default(0)
+  modifiedLines     Int             @default(0)
+  solutionVersionId String          @unique
+  solutionVersion   SolutionVersion @relation(fields: [solutionVersionId], references: [id], onDelete: Cascade)
+  aiAnalysis        Json?           // AI analysis of the changes
+  createdAt         DateTime        @default(now())
+}
+
+model AiAnalysis {
+  id            String       @id @default(cuid())
+  analysisType  String       // "error", "solution", "improvement", etc.
+  content       Json         // Structured analysis from AI
+  problemId     String
+  problem       Problem      @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  @@index([userId])
+  @@index([problemId])
+  @@index([analysisType])
+}
+
+model ErrorGroup {
+  id            String       @id @default(cuid())
+  name          String
+  description   String       @db.Text
+  rootCause     String?      @db.Text
+  aiSuggestion  String?      @db.Text
+  frequency     Int          @default(0)
+  firstSeen     DateTime     @default(now())
+  lastSeen      DateTime     @default(now())
+  errorCount    Int          @default(0)
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  problemIds    String[]     // Array of problem IDs where this error occurs
+  languages     String[]     // Languages where this error occurs
+  
+  @@index([userId])
+}
+
+model UserProgress {
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id])
+  errorFrequencyTrend Json?     // Tracking error frequency over time
+  problemSolvedTrend  Json?     // Tracking problems solved over time
+  languageProficiency Json?     // Tracking proficiency by language
+  lastAnalysisDate    DateTime? // Last time progress was analyzed
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  @@index([userId])
+} 

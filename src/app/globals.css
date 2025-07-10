@@ -1,26 +1,151 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@plugin "tailwindcss-animate";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-background: var(--color-white);
+  --color-foreground: var(--color-slate-900);
+  --color-card: var(--color-white);
+  --color-card-foreground: var(--color-slate-900);
+  --color-popover: var(--color-white);
+  --color-popover-foreground: var(--color-slate-900);
+  --color-primary: var(--color-slate-900);
+  --color-primary-foreground: var(--color-slate-50);
+  --color-secondary: var(--color-slate-100);
+  --color-secondary-foreground: var(--color-slate-900);
+  --color-muted: var(--color-slate-100);
+  --color-muted-foreground: var(--color-slate-500);
+  --color-accent: var(--color-slate-100);
+  --color-accent-foreground: var(--color-slate-900);
+  --color-destructive: var(--color-rose-500);
+  --color-destructive-foreground: var(--color-slate-50);
+  --color-border: var(--color-slate-200);
+  --color-input: var(--color-slate-200);
+  --color-ring: var(--color-slate-400);
+
+  --radius: 0.5rem;
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer theme {
+  .dark {
+    --color-background: var(--color-zinc-950);
+    --color-foreground: var(--color-zinc-50);
+    --color-card: var(--color-zinc-900);
+    --color-card-foreground: var(--color-zinc-50);
+    --color-popover: var(--color-zinc-900);
+    --color-popover-foreground: var(--color-zinc-50);
+    --color-primary: var(--color-zinc-50);
+    --color-primary-foreground: var(--color-zinc-900);
+    --color-secondary: var(--color-zinc-800);
+    --color-secondary-foreground: var(--color-zinc-50);
+    --color-muted: var(--color-zinc-800);
+    --color-muted-foreground: var(--color-zinc-400);
+    --color-accent: var(--color-zinc-800);
+    --color-accent-foreground: var(--color-zinc-50);
+    --color-destructive: var(--color-rose-700);
+    --color-destructive-foreground: var(--color-zinc-50);
+    --color-border: var(--color-zinc-800);
+    --color-input: var(--color-zinc-800);
+    --color-ring: var(--color-zinc-300);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+  
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+  
+  .dark .bg-white {
+    background-color: var(--color-card);
+    color: var(--color-card-foreground);
+  }
+  
+  .dark .bg-gray-50 {
+    background-color: var(--color-background);
+  }
+  
+  .dark .bg-gray-100 {
+    background-color: var(--color-muted);
+  }
+  
+  .dark .bg-gray-800 {
+    background-color: var(--color-card);
+  }
+  
+  .dark .bg-gray-900 {
+    background-color: var(--color-background);
+  }
+  
+  .dark .text-gray-500 {
+    color: var(--color-muted-foreground);
+  }
+  
+  .dark .text-gray-700 {
+    color: var(--color-card-foreground);
+  }
+  
+  .dark .text-gray-900 {
+    color: var(--color-card-foreground);
+  }
+  
+  .dark .border-gray-200 {
+    border-color: var(--color-border);
+  }
+  
+  .dark .border-gray-700 {
+    border-color: var(--color-border);
+  }
+  
+  .dark .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  }
 }
+
+
+/* Add custom styles for LeetCode problem description */
+.leetcode-description {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+.leetcode-description pre {
+  background-color: rgb(246, 248, 250);
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.dark .leetcode-description pre {
+  background-color: rgb(30, 30, 30);
+  color: rgb(220, 220, 220);
+}
+
+.leetcode-description code {
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+.leetcode-description p {
+  margin: 8px 0;
+}
+
+.leetcode-description ul, .leetcode-description ol {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.leetcode-description img {
+  max-width: 100%;
+} 
