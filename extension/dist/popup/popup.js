@@ -490,7 +490,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const apiResponse = await fetch(`${API_BASE_URL}/api/problems`, {
                     method: 'POST',
                     headers,
-                    credentials: 'include',
+                    credentials: 'same-origin',
                     body: JSON.stringify(requestBody)
                 });
                 const responseText = await apiResponse.text();

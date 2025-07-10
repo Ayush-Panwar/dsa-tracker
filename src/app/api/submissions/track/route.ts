@@ -123,179 +123,206 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Begin transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Try to find the problem by platformId first
-      let problem = await tx.problem.findFirst({
-        where: {
-          platformId: data.problemId,
-          userId: user.id
-        }
-      });
+    // Implement transaction with retry logic
+    let result;
+    let retries = 3;
 
-      // If problem doesn't exist, try by ID
-      if (!problem) {
-        problem = await tx.problem.findFirst({
-          where: {
-            id: data.problemId,
-            userId: user.id
-          }
-        });
-      }
-
-      // If problem still doesn't exist, create it
-      // This happens when user runs/submits code for a problem that's not in their database
-      if (!problem) {
-        console.log(`Creating new problem for submission: ${data.problemId}`);
-        problem = await tx.problem.create({
-          data: {
-            platformId: data.problemId,
-            title: data.platformTitle || `LeetCode Problem ${data.problemId}`,
-            platform: "LeetCode",
-            difficulty: data.platformDifficulty || "Medium",
-            url: data.platformUrl || `https://leetcode.com/problems/${data.problemId}/`,
-            description: data.platformDescription || "",
-            status: data.status === "Accepted" ? "Solved" : "Attempted",
-            userId: user.id
-          }
-        });
-        console.log(`Created new problem: ${problem.id}`);
-        
-        // Process tags if they exist
-        if (data.platformTags && Array.isArray(data.platformTags) && data.platformTags.length > 0) {
-          for (const tagName of data.platformTags) {
-            if (!tagName) continue;
-            
-            // Find or create tag
-            let tag = await tx.tag.findFirst({
-              where: { 
-                name: tagName,
-                userId: user.id, 
-              },
-            });
-
-            if (!tag) {
-              // Create tag with a reasonable color
-              tag = await tx.tag.create({
-                data: {
-                  name: tagName,
-                  color: getTagColor(tagName), // Helper function to assign colors
-                  userId: user.id,
-                }
-              });
+    while (retries > 0) {
+      try {
+        // Begin transaction with a timeout
+        result = await prisma.$transaction(async (tx) => {
+          // Try to find the problem by platformId first
+          let problem = await tx.problem.findFirst({
+            where: {
+              platformId: data.problemId,
+              userId: user.id
             }
+          });
 
-            // Associate tag with problem
-            await tx.problemTag.create({
-              data: {
-                problemId: problem.id,
-                tagId: tag.id,
-              },
+          // If problem doesn't exist, try by ID
+          if (!problem) {
+            problem = await tx.problem.findFirst({
+              where: {
+                id: data.problemId,
+                userId: user.id
+              }
             });
           }
+
+          // If problem still doesn't exist, create it
+          // This happens when user runs/submits code for a problem that's not in their database
+          if (!problem) {
+            console.log(`Creating new problem for submission: ${data.problemId}`);
+            problem = await tx.problem.create({
+              data: {
+                platformId: data.problemId,
+                title: data.platformTitle || `LeetCode Problem ${data.problemId}`,
+                platform: "LeetCode",
+                difficulty: data.platformDifficulty || "Medium",
+                url: data.platformUrl || `https://leetcode.com/problems/${data.problemId}/`,
+                description: data.platformDescription || "",
+                status: data.status === "Accepted" ? "Solved" : "Attempted",
+                userId: user.id
+              }
+            });
+            console.log(`Created new problem: ${problem.id}`);
+            
+            // Process tags if they exist
+            if (data.platformTags && Array.isArray(data.platformTags) && data.platformTags.length > 0) {
+              for (const tagName of data.platformTags) {
+                if (!tagName) continue;
+                
+                // Find or create tag
+                let tag = await tx.tag.findFirst({
+                  where: { 
+                    name: tagName,
+                    userId: user.id, 
+                  },
+                });
+
+                if (!tag) {
+                  // Create tag with a reasonable color
+                  tag = await tx.tag.create({
+                    data: {
+                      name: tagName,
+                      color: getTagColor(tagName), // Helper function to assign colors
+                      userId: user.id,
+                    }
+                  });
+                }
+
+                // Associate tag with problem
+                await tx.problemTag.create({
+                  data: {
+                    problemId: problem.id,
+                    tagId: tag.id,
+                  },
+                });
+              }
+            }
+          }
+
+          // Now we have a valid problem ID to use
+          const problemId = problem.id;
+
+          // Check if submission with this LeetCode ID already exists
+          const existingSubmission = await tx.submission.findFirst({
+            where: {
+              userId: user.id,
+              problemId: problemId,
+              externalId: data.leetcodeSubmissionId
+            }
+          });
+
+          // Create a submission record if it doesn't exist
+          let submission;
+          if (existingSubmission) {
+            submission = existingSubmission;
+          } else {
+            submission = await tx.submission.create({
+              data: {
+                code: data.code,
+                language: data.language,
+                status: data.status,
+                runtime: data.runtime,
+                memory: data.memory,
+                submittedAt: new Date(),
+                problemId: problemId,
+                userId: user.id,
+                externalId: data.leetcodeSubmissionId
+              }
+            });
+          }
+
+          // If there's an error, create an error record
+          let error = null;
+          if (data.errorMessage && !existingSubmission) {
+            error = await tx.error.create({
+              data: {
+                errorMessage: data.errorMessage,
+                errorType: data.status === "Accepted" ? "logical" : "runtime",
+                submissionId: submission.id
+              }
+            });
+          }
+
+          // Create solution version if needed
+          let solutionVersion = null;
+          if (data.versionInfo) {
+            // Get the latest version number for this submission
+            const latestVersion = await tx.solutionVersion.findFirst({
+              where: {
+                submissionId: submission.id
+              },
+              orderBy: {
+                versionNumber: 'desc'
+              }
+            });
+
+            const nextVersionNumber = latestVersion
+              ? latestVersion.versionNumber + 1
+              : data.versionInfo.versionNumber || 1;
+
+            solutionVersion = await tx.solutionVersion.create({
+              data: {
+                submissionId: submission.id,
+                code: data.code,
+                language: data.language,
+                versionNumber: nextVersionNumber,
+                changelog: data.versionInfo.changelog || `Submission - ${data.status}`
+              }
+            });
+          }
+
+          // If this is a successful submission, update problem status
+          if (data.status === "Accepted") {
+            await tx.problem.update({
+              where: { id: problem.id },
+              data: {
+                status: "Solved",
+                lastAttempted: new Date()
+              }
+            });
+          } else {
+            // If not solved but attempted, update status
+            await tx.problem.update({
+              where: { id: problem.id },
+              data: {
+                status: problem.status === "Solved" ? "Solved" : "Attempted",
+                lastAttempted: new Date()
+              }
+            });
+          }
+
+          // Return the submission and related data
+          return { 
+            submission, 
+            error, 
+            solutionVersion,
+            isNew: !existingSubmission
+          };
+        }, {
+          // Set a reasonable timeout for the transaction
+          timeout: 10000 // 10 seconds
+        });
+        
+        // If we got here, the transaction succeeded, so break out of the retry loop
+        break;
+      } catch (error) {
+        retries--;
+        
+        // Only retry on transaction errors (P2028)
+        if (!isPrismaTransactionError(error) || retries <= 0) {
+          throw error;
         }
+        
+        // Wait a bit before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 500 * (3 - retries)));
+        
+        // Log retry attempt
+        console.log(`Retrying transaction after error (${retries} attempts left)`);
       }
-
-      // Now we have a valid problem ID to use
-      const problemId = problem.id;
-
-      // Check if submission with this LeetCode ID already exists
-      const existingSubmission = await tx.submission.findFirst({
-        where: {
-          userId: user.id,
-          problemId: problemId,
-          externalId: data.leetcodeSubmissionId
-        }
-      });
-
-      // Create a submission record if it doesn't exist
-      let submission;
-      if (existingSubmission) {
-        submission = existingSubmission;
-      } else {
-        submission = await tx.submission.create({
-          data: {
-            code: data.code,
-            language: data.language,
-            status: data.status,
-            runtime: data.runtime,
-            memory: data.memory,
-            submittedAt: new Date(),
-            problemId: problemId,
-            userId: user.id,
-            externalId: data.leetcodeSubmissionId
-          }
-        });
-      }
-
-      // If there's an error, create an error record
-      let error = null;
-      if (data.errorMessage && !existingSubmission) {
-        error = await tx.error.create({
-          data: {
-            errorMessage: data.errorMessage,
-            errorType: data.status === "Accepted" ? "logical" : "runtime",
-            submissionId: submission.id
-          }
-        });
-      }
-
-      // Create solution version if needed
-      let solutionVersion = null;
-      if (data.versionInfo) {
-        // Get the latest version number for this submission
-        const latestVersion = await tx.solutionVersion.findFirst({
-          where: {
-            submissionId: submission.id
-          },
-          orderBy: {
-            versionNumber: 'desc'
-          }
-        });
-
-        const nextVersionNumber = latestVersion
-          ? latestVersion.versionNumber + 1
-          : data.versionInfo.versionNumber || 1;
-
-        solutionVersion = await tx.solutionVersion.create({
-          data: {
-            submissionId: submission.id,
-            code: data.code,
-            language: data.language,
-            versionNumber: nextVersionNumber,
-            changelog: data.versionInfo.changelog || `Submission - ${data.status}`
-          }
-        });
-      }
-
-      // If this is a successful submission, update problem status
-      if (data.status === "Accepted") {
-        await tx.problem.update({
-          where: { id: problem.id },
-          data: {
-            status: "Solved",
-            lastAttempted: new Date()
-          }
-        });
-      } else {
-        // If not solved but attempted, update status
-        await tx.problem.update({
-          where: { id: problem.id },
-          data: {
-            status: problem.status === "Solved" ? "Solved" : "Attempted",
-            lastAttempted: new Date()
-          }
-        });
-      }
-
-      // Return the submission and related data
-      return { 
-        submission, 
-        error, 
-        solutionVersion,
-        isNew: !existingSubmission
-      };
-    });
+    }
 
     return NextResponse.json(
       result, 
@@ -314,6 +341,14 @@ export async function POST(request: NextRequest) {
       }
     );
   }
+}
+
+// Helper function to check if an error is a Prisma transaction error
+function isPrismaTransactionError(error: unknown): boolean {
+  if (error && typeof error === 'object' && 'code' in error) {
+    return error.code === 'P2028'; // Transaction API error code
+  }
+  return false;
 }
 
 // Helper function to get CORS headers

@@ -459,7 +459,7 @@ async function debugAuth(headers) {
         const response = await fetch(`${API_BASE_URL}/api/auth/debug`, {
             method: 'GET',
             headers,
-            credentials: 'include'
+            credentials: 'same-origin'
         });
         if (response.ok) {
             const data = await response.json();
@@ -503,7 +503,7 @@ async function refreshSession() {
             body: JSON.stringify({
                 refreshToken: authData.refreshToken // Backend should expect this
             }),
-            credentials: 'include'
+            credentials: 'same-origin'
         });
         if (response.ok) {
             const newSession = await response.json();
@@ -670,7 +670,7 @@ async function handleSubmission(data) {
         const response = await fetch(`${API_BASE_URL}/api/submissions/track`, {
             method: 'POST',
             headers,
-            credentials: 'include',
+            credentials: 'same-origin',
             body: JSON.stringify(submissionData)
         });
         if (response.status === 401) {
