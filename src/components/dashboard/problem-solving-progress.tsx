@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useAnalytics } from "@/contexts/analytics-context"
 
 interface ProgressStats {
   total: number
@@ -10,45 +11,24 @@ interface ProgressStats {
 }
 
 export default function ProblemSolvingProgress() {
+  const { analyticsData, loading, error } = useAnalytics()
   const [data, setData] = useState<ProgressStats | null>(null)
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function fetchProgressStats() {
-      try {
-        setLoading(true)
-        const response = await fetch("/api/user/analytics")
-        
-        if (!response.ok) {
-          throw new Error("Failed to fetch progress stats")
-        }
-        
-        const analyticsData = await response.json()
-        
-        if (analyticsData.stats) {
-          setData({
-            total: analyticsData.stats.totalProblems || 0,
-            solved: analyticsData.stats.solvedProblems || 0,
-            attempted: analyticsData.stats.attemptedProblems || 0
-          })
-        } else {
-          setData({
-            total: 0,
-            solved: 0,
-            attempted: 0
-          })
-        }
-      } catch (err) {
-        console.error("Error fetching progress stats:", err)
-        setError("Failed to load progress statistics")
-      } finally {
-        setLoading(false)
-      }
+    if (analyticsData?.stats) {
+      setData({
+        total: analyticsData.stats.totalProblems || 0,
+        solved: analyticsData.stats.solvedProblems || 0,
+        attempted: analyticsData.stats.attemptedProblems || 0
+      })
+    } else if (!loading && !error) {
+      setData({
+        total: 0,
+        solved: 0,
+        attempted: 0
+      })
     }
-    
-    fetchProgressStats()
-  }, [])
+  }, [analyticsData, loading, error])
 
   if (loading) {
     return (
@@ -69,73 +49,59 @@ export default function ProblemSolvingProgress() {
     )
   }
 
-  if (!data || (data.total === 0 && data.solved === 0 && data.attempted === 0)) {
-    return (
-      <div className="text-center h-full flex flex-col items-center justify-center text-muted-foreground">
-        <p className="font-medium">No problem data available</p>
-        <p className="text-sm mt-2">Start tracking problems to see your progress</p>
-      </div>
-    )
+  if (!data) {
+    return null
   }
 
-  // Calculate completion percentage
-  const completionPercentage = data.total > 0 
-    ? Math.round((data.solved / data.total) * 100) 
-    : 0
-
-  // Format data for the chart
-  const chartData = [
-    { name: "Total", value: data.total },
-    { name: "Attempted", value: data.attempted },
-    { name: "Solved", value: data.solved }
-  ]
+  const solvedPercentage = data.total > 0 ? Math.round((data.solved / data.total) * 100) : 0
+  const attemptedPercentage = data.total > 0 ? Math.round((data.attempted / data.total) * 100) : 0
+  const remainingPercentage = 100 - solvedPercentage - attemptedPercentage
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <p className="text-2xl font-bold">{completionPercentage}% Complete</p>
-          <p className="text-sm text-muted-foreground">
-            {data.solved} of {data.total} problems solved
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-medium">
-            Attempted: <span className="font-bold">{data.attempted}</span>
-          </p>
-          <p className="text-sm font-medium">
-            Remaining: <span className="font-bold">{data.total - data.solved}</span>
-          </p>
-        </div>
-      </div>
-
-      <div className="flex-1 min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={chartData}
-            layout="vertical"
-            margin={{
-              top: 5,
-              right: 30,
-              left: 20,
-              bottom: 5,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-            <XAxis type="number" />
-            <YAxis type="category" dataKey="name" />
-            <Tooltip formatter={(value: number) => [`${value} problems`]} />
-            <Legend />
-            <Bar 
-              dataKey="value" 
-              name="Problems" 
-              fill="#3b82f6" 
-              radius={[0, 4, 4, 0]} 
+    <Card>
+      <CardHeader>
+        <CardTitle>Problem Solving Progress</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-green-500 float-left rounded-l-full" 
+              style={{ width: `${solvedPercentage}%` }}
+              title={`Solved: ${data.solved} (${solvedPercentage}%)`}
             />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
+            <div 
+              className="h-full bg-yellow-500 float-left" 
+              style={{ width: `${attemptedPercentage}%` }}
+              title={`Attempted: ${data.attempted} (${attemptedPercentage}%)`}
+            />
+            <div 
+              className="h-full bg-gray-300 dark:bg-gray-600 float-left rounded-r-full" 
+              style={{ width: `${remainingPercentage}%` }}
+              title={`Remaining: ${data.total - data.solved - data.attempted} (${remainingPercentage}%)`}
+            />
+          </div>
+          
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <div className="text-sm font-medium text-muted-foreground">Solved</div>
+              <div className="text-xl font-bold text-green-500">{data.solved}</div>
+              <div className="text-xs text-muted-foreground">{solvedPercentage}%</div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-muted-foreground">Attempted</div>
+              <div className="text-xl font-bold text-yellow-500">{data.attempted}</div>
+              <div className="text-xs text-muted-foreground">{attemptedPercentage}%</div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-muted-foreground">Total</div>
+              <div className="text-xl font-bold">{data.total}</div>
+              <div className="text-xs text-muted-foreground">&nbsp;</div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 } 
  

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
+import { useAnalytics } from "@/contexts/analytics-context"
 
 // Define the difficulty colors
 const DIFFICULTY_COLORS = {
@@ -23,47 +24,27 @@ interface DifficultyItem {
 }
 
 export default function DifficultyDistribution() {
+  const { analyticsData, loading, error } = useAnalytics()
   const [data, setData] = useState<DifficultyData[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function fetchDifficultyDistribution() {
-      try {
-        setLoading(true)
-        const response = await fetch("/api/user/analytics")
-        
-        if (!response.ok) {
-          throw new Error("Failed to fetch difficulty distribution")
-        }
-        
-        const analyticsData = await response.json()
-        
-        if (analyticsData.distribution && analyticsData.distribution.problemsByDifficulty) {
-          // Transform the data for the pie chart
-          const chartData = analyticsData.distribution.problemsByDifficulty.map((item: DifficultyItem) => ({
-            difficulty: item.difficulty,
-            count: item._count.id
-          }))
-          
-          setData(chartData)
-        } else {
-          setData([
-            { difficulty: "Easy", count: 0 },
-            { difficulty: "Medium", count: 0 },
-            { difficulty: "Hard", count: 0 }
-          ])
-        }
-      } catch (err) {
-        console.error("Error fetching difficulty distribution:", err)
-        setError("Failed to load difficulty distribution")
-      } finally {
-        setLoading(false)
-      }
+    if (analyticsData?.distribution?.problemsByDifficulty) {
+      // Transform the data for the pie chart
+      const chartData = analyticsData.distribution.problemsByDifficulty.map((item: DifficultyItem) => ({
+        difficulty: item.difficulty,
+        count: item._count.id
+      }))
+      
+      setData(chartData)
+    } else if (!loading && !error) {
+      // Set default empty data if no data is available
+      setData([
+        { difficulty: "Easy", count: 0 },
+        { difficulty: "Medium", count: 0 },
+        { difficulty: "Hard", count: 0 }
+      ])
     }
-    
-    fetchDifficultyDistribution()
-  }, [])
+  }, [analyticsData, loading, error])
 
   // Calculate total problems
   const totalProblems = data.reduce((sum, item) => sum + item.count, 0)
