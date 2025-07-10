@@ -464,7 +464,7 @@ async function sendErrorToBackend(analysis) {
     try {
         // Get API base URL from storage
         // @ts-expect-error - process.env.API_BASE_URL is injected by webpack.DefinePlugin
-        const apiBaseUrl = localStorage.getItem('apiBaseUrl') || "https://dsa-tracker.vercel.app" || 0;
+        const apiBaseUrl = localStorage.getItem('apiBaseUrl') || "https://dsa-tracker-rosy.vercel.app" || 0;
         // Prepare error data
         const errorData = {
             errorMessage: analysis.errorMessage,
@@ -1500,7 +1500,7 @@ async function sendVersionToBackend(version) {
     try {
         // Get API base URL and auth token
         // @ts-expect-error - process.env.API_BASE_URL is injected by webpack.DefinePlugin
-        const apiBaseUrl = localStorage.getItem('apiBaseUrl') || "https://dsa-tracker.vercel.app" || 0;
+        const apiBaseUrl = localStorage.getItem('apiBaseUrl') || "https://dsa-tracker-rosy.vercel.app" || 0;
         const token = localStorage.getItem('token');
         // Only proceed if we have a token
         if (!token) {
