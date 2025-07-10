@@ -64,13 +64,43 @@ interface SubmissionTrackData {
   };
 }
 
+// Add CORS headers for the Chrome extension
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin') || '';
+  
+  // Check if the request is coming from our Chrome extension
+  if (origin.startsWith('chrome-extension://')) {
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Max-Age': '86400', // 24 hours
+      },
+    });
+  }
+  
+  // For other origins, return a basic response
+  return new NextResponse(null, { status: 200 });
+}
+
 // POST a new submission tracking request
 export async function POST(request: NextRequest) {
   try {
+    const origin = request.headers.get('origin') || '';
+    
     // Authenticate the user
     const authUser = await getUser();
     if (!authUser) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" }, 
+        { 
+          status: 401,
+          headers: getCorsHeaders(origin)
+        }
+      );
     }
 
     // Ensure user exists in database
@@ -86,7 +116,10 @@ export async function POST(request: NextRequest) {
     if (!data.problemId || !data.code || !data.language || !data.leetcodeSubmissionId) {
       return NextResponse.json(
         { error: "Missing required fields" },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: getCorsHeaders(origin)
+        }
       );
     }
 
@@ -264,14 +297,38 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json(
+      result, 
+      { 
+        status: 201,
+        headers: getCorsHeaders(origin)
+      }
+    );
   } catch (error) {
     console.error("Error tracking submission:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to track submission" },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: getCorsHeaders(request.headers.get('origin') || '')
+      }
     );
   }
+}
+
+// Helper function to get CORS headers
+function getCorsHeaders(origin: string) {
+  // Only allow the Chrome extension origin or specific origins you trust
+  const headers: Record<string, string> = {};
+  
+  if (origin.startsWith('chrome-extension://')) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Access-Control-Allow-Credentials'] = 'true';
+    headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS';
+    headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Client-Info';
+  }
+  
+  return headers;
 } 
  
  

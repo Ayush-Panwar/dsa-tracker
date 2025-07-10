@@ -298,7 +298,7 @@ async function debugAuth(headers: Record<string, string>) {
     const response = await fetch(`${API_BASE_URL}/api/auth/debug`, {
       method: 'GET',
       headers,
-      credentials: 'include'
+      credentials: 'same-origin'
     });
     
     if (response.ok) {
@@ -343,7 +343,7 @@ async function refreshSession(): Promise<boolean> {
       body: JSON.stringify({
         refreshToken: authData.refreshToken // Backend should expect this
       }),
-      credentials: 'include'
+      credentials: 'same-origin'
     });
 
     if (response.ok) {
@@ -527,7 +527,7 @@ async function handleSubmission(data: SubmissionData): Promise<{success: boolean
     const response = await fetch(`${API_BASE_URL}/api/submissions/track`, {
         method: 'POST',
         headers,
-      credentials: 'include',
+      credentials: 'same-origin',
       body: JSON.stringify(submissionData)
       });
       
