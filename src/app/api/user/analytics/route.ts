@@ -194,6 +194,7 @@ export async function GET() {
     const hasActivity = weeklyActivity.some(day => day.count > 0);
     if (!hasActivity) {
       // Create sample data for demonstration purposes
+      /*
       const today = new Date();
       const yesterday = subDays(today, 1);
       const twoDaysAgo = subDays(today, 2);
@@ -209,6 +210,8 @@ export async function GET() {
           day.count = 3; // Two days ago
         }
       }
+      */
+      // No sample data - show empty chart instead
     }
     
     // Get recent submissions
