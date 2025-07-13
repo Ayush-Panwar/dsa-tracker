@@ -200,6 +200,78 @@ export async function POST(request: NextRequest) {
                 });
               }
             }
+          } else {
+            // Update existing problem with new details if provided
+            const updateData: Record<string, string> = {};
+            
+            // Only update fields if they're provided and the current value is empty
+            if (data.platformDescription && (!problem.description || problem.description === "")) {
+              updateData.description = data.platformDescription;
+            }
+            
+            if (data.platformTitle && (!problem.title || problem.title.startsWith('LeetCode Problem'))) {
+              updateData.title = data.platformTitle;
+            }
+            
+            if (data.platformDifficulty && (!problem.difficulty || problem.difficulty === "Medium")) {
+              updateData.difficulty = data.platformDifficulty;
+            }
+            
+            if (data.platformUrl && (!problem.url || !problem.url.includes('leetcode.com'))) {
+              updateData.url = data.platformUrl;
+            }
+            
+            // Update the problem if we have new data
+            if (Object.keys(updateData).length > 0) {
+              problem = await tx.problem.update({
+                where: { id: problem.id },
+                data: updateData
+              });
+              console.log(`Updated problem ${problem.id} with new details`);
+            }
+            
+            // Process tags if they exist and the problem doesn't have tags yet
+            if (data.platformTags && Array.isArray(data.platformTags) && data.platformTags.length > 0) {
+              // Check if problem already has tags
+              const existingTags = await tx.problemTag.count({
+                where: { problemId: problem.id }
+              });
+              
+              // Only add tags if there are none
+              if (existingTags === 0) {
+                for (const tagName of data.platformTags) {
+                  if (!tagName) continue;
+                  
+                  // Find or create tag
+                  let tag = await tx.tag.findFirst({
+                    where: { 
+                      name: tagName,
+                      userId: user.id, 
+                    },
+                  });
+  
+                  if (!tag) {
+                    // Create tag with a reasonable color
+                    tag = await tx.tag.create({
+                      data: {
+                        name: tagName,
+                        color: getTagColor(tagName), // Helper function to assign colors
+                        userId: user.id,
+                      }
+                    });
+                  }
+  
+                  // Associate tag with problem
+                  await tx.problemTag.create({
+                    data: {
+                      problemId: problem.id,
+                      tagId: tag.id,
+                    },
+                  });
+                }
+                console.log(`Added tags to existing problem ${problem.id}`);
+              }
+            }
           }
 
           // Now we have a valid problem ID to use
